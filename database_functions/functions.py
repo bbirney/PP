@@ -271,7 +271,7 @@ def add_podcast(cnx, database_type, podcast_values, user_id, feed_cutoff, userna
 
             # Now proceed with add_episodes as normal
             first_episode_id = add_episodes(cnx, database_type, podcast_id, podcast_values['pod_feed_url'],
-                                            podcast_values['pod_artwork'], False, username, password, websocket=False)
+                                            podcast_values['pod_artwork'], False, feed_cutoff, username, password, websocket=False)
             print("Episodes added for existing podcast")
             # Return both IDs like we do for new podcasts
             return podcast_id, first_episode_id
@@ -1053,7 +1053,7 @@ def update_episode_count(cnx, database_type, cursor, podcast_id):
     cursor.execute(update_query, (podcast_id,))
     cnx.commit()
 
-def add_episodes(cnx, database_type, podcast_id, feed_url, artwork_url, auto_download, username=None, password=None, websocket=False):
+def add_episodes(cnx, database_type, podcast_id, feed_url, artwork_url, auto_download, feed_cutoff, username=None, password=None, websocket=False):
     import feedparser
     first_episode_id = None
 
@@ -1089,6 +1089,17 @@ def add_episodes(cnx, database_type, podcast_id, feed_url, artwork_url, auto_dow
         if not hasattr(entry, 'title') or not entry.title:
             continue
 
+        # Release date - use current time as fallback if parsing fails
+        try:
+            parsed_release_datetime = dateutil.parser.parse(entry.published).strftime("%Y-%m-%d %H:%M:%S")
+        except (AttributeError, ValueError):
+            parsed_release_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        if feed_cutoff > 0:
+            cutoff_date = datetime.datetime.now(datetime.timezone.utc) - timedelta(days=feed_cutoff)
+            if parsed_release_datetime <= cutoff_date:
+                continue # episode is too old
+
         parsed_title = entry.title
 
         # Description - use placeholder if missing
@@ -1096,12 +1107,6 @@ def add_episodes(cnx, database_type, podcast_id, feed_url, artwork_url, auto_dow
 
         # Audio URL can be empty (non-audio posts are allowed)
         parsed_audio_url = entry.enclosures[0].href if entry.enclosures else ""
-
-        # Release date - use current time as fallback if parsing fails
-        try:
-            parsed_release_datetime = dateutil.parser.parse(entry.published).strftime("%Y-%m-%d %H:%M:%S")
-        except (AttributeError, ValueError):
-            parsed_release_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Artwork - use placeholders based on feed name/episode number
         parsed_artwork_url = (entry.get('itunes_image', {}).get('href') or
@@ -2618,7 +2623,7 @@ def refresh_pods_for_user(cnx, database_type, podcast_id):
             youtube.process_youtube_videos(database_type, podcast_id, channel_id, cnx, feed_cutoff)
         else:
             episodes = add_episodes(cnx, database_type, podcast_id, feed_url,
-                                  artwork_url, auto_download,
+                                  artwork_url, auto_download, feed_cutoff,
                                   username, password, websocket=True)
             new_episodes.extend(episodes)
 
