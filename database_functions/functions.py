@@ -1346,7 +1346,7 @@ def add_youtube_channel(cnx, database_type: str, channel_info: dict, user_id: in
                 INSERT INTO "Podcasts" (
                     PodcastName, FeedURL, ArtworkURL, Author, Description,
                     WebsiteURL, UserID, IsYouTubeChannel, Categories, FeedCutoffDays,
-                    SponsorBlockCategories, MinDurationMinutes
+                    SponsorBlockCategories, mindurationseconds
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, %s, %s, %s, %s)
                 RETURNING PodcastID
             """
@@ -1355,7 +1355,7 @@ def add_youtube_channel(cnx, database_type: str, channel_info: dict, user_id: in
                 INSERT INTO Podcasts (
                     PodcastName, FeedURL, ArtworkURL, Author, Description,
                     WebsiteURL, UserID, IsYouTubeChannel, Categories, FeedCutoffDays, 
-                    SponsorBlockCategories, MinDurationMinutes
+                    SponsorBlockCategories, mindurationseconds
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, 1, %s, %s, %s, %s)
             """
 
