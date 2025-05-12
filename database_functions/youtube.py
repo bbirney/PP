@@ -10,7 +10,21 @@ from bs4 import BeautifulSoup
 import time
 import random
 from database_functions import functions
+from enum import IntFlag
 
+# see https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/postprocessor/sponsorblock.py#L21
+class SponsorBlockCategories(IntFlag):
+    sponsor = 1 << 0  # 1
+    intro = 1 << 1    # 2
+    outro = 1 << 2    # 4
+    selfpromo = 1 << 3  # 8
+    preview = 1 << 4    # 16
+    filler = 1 << 5     # 32
+    interaction = 1 << 6  # 64
+    music_offtopic = 1 << 7  # 128
+    
+    def bitfield_to_list(categories: int) -> list[str]:
+        return [category.name for category in SponsorBlockCategories if categories & category]
 
 async def get_channel_info(channel_id: str) -> Dict:
     """
@@ -64,7 +78,7 @@ async def get_channel_info(channel_id: str) -> Dict:
             detail=f"Error fetching channel info: {str(e)}"
         )
 
-def download_youtube_audio(video_id: str, output_path: str):
+def download_youtube_audio(video_id: str, output_path: str, sponsorblock_categories: int, min_duration_seconds: int):
     """Download audio for a YouTube video"""
     # Remove .mp3 extension if present to prevent double extension
     if output_path.endswith('.mp3'):
@@ -72,19 +86,29 @@ def download_youtube_audio(video_id: str, output_path: str):
     else:
         base_path = output_path
 
+    post_processors = [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+    }]
+
+    if len(sponsorblock_categories) > 0:
+        
+        post_processors.append({
+            'key': 'SponsorBlockPP',
+            'categories': SponsorBlockCategories.bitfield_to_list(sponsorblock_categories)
+        })
+
     ydl_opts = {
         'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-        }],
-        'outtmpl': base_path
+        'postprocessors': post_processors,
+        'outtmpl': base_path,
+        'match_filters': [f'duration>={min_duration_seconds}']
     }
     with YoutubeDL(ydl_opts) as ydl:
         ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
 
 
-def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx, feed_cutoff: int):
+def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx, feed_cutoff: int, sponsorblock_categories: int, min_duration_seconds: int):
     """Background task to process videos and download audio"""
 
     logging.basicConfig(level=logging.INFO)
@@ -105,6 +129,7 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
             'no_warnings': True,
             'extract_flat': True,  # Fast initial fetch
             'ignoreerrors': True,
+            'match_filters': [f'duration>={min_duration_seconds}']
         }
 
         logger.info("Initializing YouTube-DL with options:")
@@ -218,7 +243,7 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
                         continue
 
                     logger.info("Starting download...")
-                    download_youtube_audio(video['id'], output_path)
+                    download_youtube_audio(video['id'], output_path, sponsorblock_categories, min_duration_seconds)
                     logger.info("Download completed successfully")
 
                 except Exception as e:
