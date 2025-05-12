@@ -177,6 +177,10 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
                         logger.info(f"Video {video_id} from {published} is too old, stopping processing")
                         break
 
+                    if entry.get('duration', 0) < min_duration_seconds:
+                        logger.info(f"Video {video_id} has a duration of {entry.get('duration', 0)} seconds, which is less than the minimum duration of {min_duration_seconds} seconds, skipping")
+                        continue
+
                     video_data = {
                         'id': video_id,
                         'title': entry['title'],
