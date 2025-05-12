@@ -172,7 +172,6 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
 
                 try:
                     video_id = entry['id']
-                    logger.info(f"\nProcessing video ID: {video_id}")
 
                     # Get upload date using BS4 method
                     published = functions.get_video_date(video_id)
@@ -180,7 +179,6 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
                         logger.warning(f"Could not determine upload date for video {video_id}, skipping")
                         continue
 
-                    logger.info(f"Video publish date: {published}")
 
                     if published <= cutoff_date:
                         logger.info(f"Video {video_id} from {published} is too old, stopping processing")
@@ -189,6 +187,9 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
                     if entry.get('duration', 0) < min_duration_seconds:
                         logger.info(f"Video {video_id} has a duration of {entry.get('duration', 0)} seconds, which is less than the minimum duration of {min_duration_seconds} seconds, skipping")
                         continue
+        
+                    logger.info(f"\nProcessing video ID: {video_id}")
+                    logger.info(f"Video publish date: {published}")
 
                     video_data = {
                         'id': video_id,
