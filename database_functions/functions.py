@@ -292,14 +292,14 @@ def add_podcast(cnx, database_type, podcast_values, user_id, feed_cutoff, min_du
         if database_type == "postgresql":
             add_podcast_query = """
                 INSERT INTO "Podcasts"
-                (PodcastName, ArtworkURL, Author, Categories, Description, EpisodeCount, FeedURL, WebsiteURL, Explicit, UserID, FeedCutoffDays, MinDurationSeconds, Username, Password, PodcastIndexID)
+                (PodcastName, ArtworkURL, Author, Categories, Description, EpisodeCount, FeedURL, WebsiteURL, Explicit, UserID, FeedCutoffDays, mindurationseconds, Username, Password, PodcastIndexID)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING PodcastID
             """
             explicit = podcast_values['pod_explicit']
         else:  # MySQL or MariaDB
             add_podcast_query = """
                 INSERT INTO Podcasts
-                (PodcastName, ArtworkURL, Author, Categories, Description, EpisodeCount, FeedURL, WebsiteURL, Explicit, UserID, FeedCutoffDays, MinDurationSeconds, Username, Password, PodcastIndexID)
+                (PodcastName, ArtworkURL, Author, Categories, Description, EpisodeCount, FeedURL, WebsiteURL, Explicit, UserID, FeedCutoffDays, mindurationseconds, Username, Password, PodcastIndexID)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             explicit = 1 if podcast_values['pod_explicit'] else 0
@@ -2886,7 +2886,7 @@ def refresh_pods_for_user(cnx, database_type, podcast_id):
         select_podcast = '''
             SELECT PodcastID, FeedURL, ArtworkURL, AutoDownload, Username, Password,
                    IsYouTubeChannel, COALESCE(FeedURL, '') as channel_id, FeedCutoffDays, 
-                   SponsorBlockCategories, MinDurationSeconds
+                   SponsorBlockCategories, mindurationseconds
             FROM Podcasts
             WHERE PodcastID = %s
         '''
@@ -2947,14 +2947,14 @@ def refresh_pods(cnx, database_type):
         select_podcasts = '''
             SELECT PodcastID, FeedURL, ArtworkURL, AutoDownload, Username, Password,
                    IsYouTubeChannel, UserID, COALESCE(FeedURL, '') as channel_id, FeedCutoffDays,
-                   SponsorBlockCategories, MinDurationSeconds
+                   SponsorBlockCategories, mindurationseconds
             FROM "Podcasts"
         '''
     else:
         select_podcasts = '''
             SELECT PodcastID, FeedURL, ArtworkURL, AutoDownload, Username, Password,
                    IsYouTubeChannel, UserID, COALESCE(FeedURL, '') as channel_id, FeedCutoffDays, 
-                   SponsorBlockCategories, MinDurationSeconds
+                   SponsorBlockCategories, mindurationseconds
             FROM Podcasts
         '''
     cursor.execute(select_podcasts)
@@ -2990,7 +2990,7 @@ def refresh_pods(cnx, database_type):
                     channel_id = result["channel_id"]
                     feed_cutoff = result["FeedCutoffDays"]
                     sponsorblock_categories = result["SponsorBlockCategories"]
-                    min_duration_seconds = result["MinDurationSeconds"]
+                    min_duration_seconds = result["mindurationseconds"]
             else:
                 raise ValueError(f"Unexpected result type: {type(result)}")
             print(f'Running for: {podcast_id}')

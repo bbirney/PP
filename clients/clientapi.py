@@ -2645,7 +2645,7 @@ async def run_refresh_process(user_id, nextcloud_refresh, websocket, cnx):
             cursor.execute('''
                 SELECT PodcastID, PodcastName, FeedURL, ArtworkURL, AutoDownload,
                        Username, Password, IsYouTubeChannel, FeedCutoffDays, 
-                       SponsorBlockCategories, MinDurationSeconds
+                       SponsorBlockCategories, mindurationseconds
                 FROM Podcasts
                 WHERE UserID = %s
             ''', (user_id,))
@@ -2680,7 +2680,7 @@ async def run_refresh_process(user_id, nextcloud_refresh, websocket, cnx):
                     is_youtube = podcast['IsYouTubeChannel']
                     feed_cutoff = podcast['FeedCutoffDays']
                     sponsorblock_categories = podcast['SponsorBlockCategories']
-                    min_duration_seconds = podcast['MinDurationSeconds']
+                    min_duration_seconds = podcast['mindurationseconds']
             else:
                 podcast_id, podcast_name, feed_url, artwork_url, auto_download, username, password, is_youtube, feed_cutoff, sponsorblock_categories, min_duration_seconds = podcast
 

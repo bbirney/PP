@@ -460,7 +460,7 @@ try:
         NotificationsEnabled TINYINT(1) DEFAULT 0,
         FeedCutoffDays NOT NULL INT DEFAULT 0,
         SponsorBlockCategories NOT NULL INT DEFAULT 0,
-        MinDurationSeconds NOT NULL INT DEFAULT 0,
+        mindurationseconds NOT NULL INT DEFAULT 0,
         FOREIGN KEY (UserID) REFERENCES Users(UserID)
         )""")
 

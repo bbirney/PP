@@ -566,7 +566,7 @@ try:
                 NotificationsEnabled BOOLEAN DEFAULT FALSE,
                 FeedCutoffDays NOT NULL INT DEFAULT 0,
                 SponsorBlockCategories NOT NULL INT DEFAULT 0,
-                MinDurationSeconds NOT NULL INT DEFAULT 0,
+                mindurationseconds NOT NULL INT DEFAULT 0,
                 FOREIGN KEY (UserID) REFERENCES "Users"(UserID)
             )
         """)
