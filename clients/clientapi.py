@@ -2636,14 +2636,16 @@ async def run_refresh_process(user_id, nextcloud_refresh, websocket, cnx):
         if database_type == "postgresql":
             cursor.execute('''
                 SELECT "podcastid", "podcastname", "feedurl", "artworkurl", "autodownload",
-                       "username", "password", "isyoutubechannel", "feedcutoffdays"
+                       "username", "password", "isyoutubechannel", "feedcutoffdays", 
+                       "sponsorblockcategories", "mindurationseconds"
                 FROM "Podcasts"
                 WHERE "userid" = %s
             ''', (user_id,))
         else:
             cursor.execute('''
                 SELECT PodcastID, PodcastName, FeedURL, ArtworkURL, AutoDownload,
-                       Username, Password, IsYouTubeChannel, FeedCutoffDays
+                       Username, Password, IsYouTubeChannel, FeedCutoffDays, 
+                       SponsorBlockCategories, MinDurationSeconds
                 FROM Podcasts
                 WHERE UserID = %s
             ''', (user_id,))
@@ -2665,6 +2667,8 @@ async def run_refresh_process(user_id, nextcloud_refresh, websocket, cnx):
                     password = podcast['password']
                     is_youtube = podcast['isyoutubechannel']
                     feed_cutoff = podcast['feedcutoffdays']
+                    sponsorblock_categories = podcast['sponsorblockcategories']
+                    min_duration_seconds = podcast['mindurationseconds']
                 else:
                     podcast_id = podcast['PodcastID']
                     podcast_name = podcast['PodcastName']
@@ -2675,8 +2679,10 @@ async def run_refresh_process(user_id, nextcloud_refresh, websocket, cnx):
                     password = podcast['Password']
                     is_youtube = podcast['IsYouTubeChannel']
                     feed_cutoff = podcast['FeedCutoffDays']
+                    sponsorblock_categories = podcast['SponsorBlockCategories']
+                    min_duration_seconds = podcast['MinDurationSeconds']
             else:
-                podcast_id, podcast_name, feed_url, artwork_url, auto_download, username, password, is_youtube, feed_cutoff = podcast
+                podcast_id, podcast_name, feed_url, artwork_url, auto_download, username, password, is_youtube, feed_cutoff, sponsorblock_categories, min_duration_seconds = podcast
 
             await websocket.send_json({
                 "progress": {
@@ -2699,7 +2705,9 @@ async def run_refresh_process(user_id, nextcloud_refresh, websocket, cnx):
                         podcast_id,
                         channel_id,
                         cnx,
-                        feed_cutoff
+                        feed_cutoff,
+                        sponsorblock_categories,
+                        min_duration_seconds
                     )
                     if youtube_episodes:
                         for episode in youtube_episodes:
@@ -2716,6 +2724,7 @@ async def run_refresh_process(user_id, nextcloud_refresh, websocket, cnx):
                         artwork_url,
                         auto_download,
                         feed_cutoff,
+                        min_duration_seconds,
                         username,
                         password,
                         True # websocket
@@ -6091,10 +6100,10 @@ async def search_youtube_channels(
             detail=f"Error searching YouTube channels: {str(e)}"
         )
 
-def process_youtube_channel(podcast_id: int, channel_id: str, feed_cutoff: int):
+def process_youtube_channel(podcast_id: int, channel_id: str, feed_cutoff: int, sponsorblock_categories: int, min_duration_seconds: int):
     cnx = create_database_connection()
     try:
-        database_functions.youtube.process_youtube_videos(database_type, podcast_id, channel_id, cnx, feed_cutoff)
+        database_functions.youtube.process_youtube_videos(database_type, podcast_id, channel_id, cnx, feed_cutoff, sponsorblock_categories, min_duration_seconds)
     finally:
         close_database_connection(cnx)
 
@@ -6104,6 +6113,8 @@ async def subscribe_to_youtube_channel(
     user_id: int,
     background_tasks: BackgroundTasks,
     feed_cutoff: int = 30,
+    sponsorblock_categories: int = 0,
+    min_duration_seconds: int = 0,
     cnx=Depends(get_database_connection),
     api_key: str = Depends(get_api_key_from_header)
 ):
@@ -6127,10 +6138,10 @@ async def subscribe_to_youtube_channel(
         channel_info = await database_functions.youtube.get_channel_info(channel_id)
 
         logger.info("Adding channel to database")
-        podcast_id = database_functions.functions.add_youtube_channel(cnx, database_type, channel_info, user_id, feed_cutoff)
+        podcast_id = database_functions.functions.add_youtube_channel(cnx, database_type, channel_info, user_id, feed_cutoff, sponsorblock_categories, min_duration_seconds)
 
         logger.info(f"Starting background task for podcast_id {podcast_id}")
-        background_tasks.add_task(process_youtube_channel, podcast_id, channel_id, feed_cutoff)
+        background_tasks.add_task(process_youtube_channel, podcast_id, channel_id, feed_cutoff, sponsorblock_categories, min_duration_seconds)
 
         logger.info("Subscription completed successfully")
         return {
