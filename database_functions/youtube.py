@@ -105,8 +105,9 @@ def download_youtube_audio(video_id: str, output_path: str, sponsorblock_categor
 
     ydl_opts = {
         'format': 'bestaudio/best',
-        'postprocessors': post_processors,
         'outtmpl': base_path,
+        'ignoreerrors': True,  # Add this to not fail on individual errors
+        'postprocessors': post_processors,        
         'match_filters': [ duration_filter ]
     }
     with YoutubeDL(ydl_opts) as ydl:
@@ -128,6 +129,9 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
     try:
         cutoff_date = datetime.datetime.now(datetime.timezone.utc) - timedelta(days=feed_cutoff)
         logger.info(f"Cutoff date set to: {cutoff_date}")
+
+        logger.info("Cleaning up videos older than cutoff date...")
+        functions.remove_old_youtube_videos(cnx, database_type, podcast_id, cutoff_date)
 
         ydl_opts = {
             'quiet': True,
@@ -238,6 +242,9 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
                 raise
 
             logger.info("\nStarting audio downloads")
+            successful_downloads = 0
+            failed_downloads = 0
+
             for video in recent_videos:
                 try:
                     output_path = f"/opt/pinepods/downloads/youtube/{video['id']}.mp3"
@@ -254,12 +261,28 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
                     logger.info("Starting download...")
                     download_youtube_audio(video['id'], output_path, sponsorblock_categories, min_duration_seconds)
                     logger.info("Download completed successfully")
+                    successful_downloads += 1
 
                 except Exception as e:
-                    logger.error(f"Failed to download video {video['id']}")
-                    logger.error(str(e))
-                    logger.exception("Full traceback:")
+                    # This is the key fix - properly catch all exceptions and continue
+                    failed_downloads += 1
+
+                    # Check for specific error types to provide better logging
+                    error_msg = str(e)
+                    if "members-only content" in error_msg.lower():
+                        logger.warning(f"Skipping video {video['id']} - Members-only content: {video['title']}")
+                    elif "private" in error_msg.lower():
+                        logger.warning(f"Skipping video {video['id']} - Private video: {video['title']}")
+                    elif "unavailable" in error_msg.lower():
+                        logger.warning(f"Skipping video {video['id']} - Unavailable video: {video['title']}")
+                    else:
+                        logger.error(f"Failed to download video {video['id']}: {video['title']}")
+                        logger.error(f"Error: {error_msg}")
+
+                    # Always continue to the next video
                     continue
+
+            logger.info(f"\nDownload summary: {successful_downloads} successful, {failed_downloads} failed")
         else:
             logger.info("No new videos to process")
 
@@ -269,6 +292,11 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
         logger.exception("Full traceback:")
         raise e
     finally:
+        # Use recalculate to ensure accuracy
+        try:
+            functions.update_episode_count(cnx, database_type, podcast_id)
+        except Exception as e:
+            logger.error(f"Failed to update episode count: {str(e)}")
         logger.info("\nCleaning up database connection")
         logger.info("="*50)
         logger.info("Channel processing complete")

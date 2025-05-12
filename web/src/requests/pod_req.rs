@@ -2739,6 +2739,11 @@ pub struct RemoveYouTubeChannelValues {
     pub channel_url: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct YoutubeChannelResponse {
+    pub success: bool,
+}
+
 pub async fn call_remove_youtube_channel(
     server_name: &String,
     api_key: &Option<String>,
@@ -2748,7 +2753,6 @@ pub async fn call_remove_youtube_channel(
     let api_key_ref = api_key
         .as_deref()
         .ok_or_else(|| anyhow::Error::msg("API key is missing"))?;
-
     let json_body = serde_json::to_string(remove_channel)?;
     let response = Request::post(&url)
         .header("Api-Key", api_key_ref)
@@ -2756,14 +2760,12 @@ pub async fn call_remove_youtube_channel(
         .body(json_body)?
         .send()
         .await?;
-
     let response_text = response
         .text()
         .await
         .unwrap_or_else(|_| "Failed to get response text".to_string());
-
     if response.ok() {
-        match serde_json::from_str::<PodcastStatusResponse>(&response_text) {
+        match serde_json::from_str::<YoutubeChannelResponse>(&response_text) {
             Ok(parsed_response) => Ok(parsed_response.success),
             Err(_parse_error) => Err(anyhow::Error::msg("Failed to parse response")),
         }
