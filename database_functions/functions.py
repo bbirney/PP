@@ -2713,8 +2713,6 @@ def refresh_pods(cnx, database_type):
             continue
     cursor.close()
 
-
-+
 def remove_unavailable_episodes(cnx, database_type):
     cursor = cnx.cursor()
 
