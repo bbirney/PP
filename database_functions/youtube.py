@@ -26,6 +26,12 @@ class SponsorBlockCategories(IntFlag):
     def bitfield_to_list(categories: int) -> list[str]:
         return [category.name for category in SponsorBlockCategories if categories & category]
 
+def duration_filter(info, *, incomplete):
+    duration = info.get('duration')
+    if duration and duration < 60:
+        return 'The video is too short'
+
+
 async def get_channel_info(channel_id: str) -> Dict:
     """
     Get YouTube channel info using yt-dlp
@@ -97,12 +103,6 @@ def download_youtube_audio(video_id: str, output_path: str, sponsorblock_categor
             'categories': SponsorBlockCategories.bitfield_to_list(sponsorblock_categories)
         })
 
-    def duration_filter(info, *, incomplete):
-        duration = info.get('duration')
-        if duration and duration < 60:
-            return 'The video is too short'
-
-
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': base_path,
@@ -138,7 +138,7 @@ def process_youtube_videos(database_type, podcast_id: int, channel_id: str, cnx,
             'no_warnings': True,
             'extract_flat': True,  # Fast initial fetch
             'ignoreerrors': True,
-            'match_filters': [f'duration>={min_duration_seconds}']
+            'match_filters': [ duration_filter ]
         }
 
         logger.info("Initializing YouTube-DL with options:")
