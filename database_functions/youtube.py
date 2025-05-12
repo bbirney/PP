@@ -93,7 +93,7 @@ def download_youtube_audio(video_id: str, output_path: str, sponsorblock_categor
 
     if sponsorblock_categories > 0: 
         post_processors.append({
-            'key': 'SponsorBlockPP',
+            'key': 'SponsorBlock',
             'categories': SponsorBlockCategories.bitfield_to_list(sponsorblock_categories)
         })
 
