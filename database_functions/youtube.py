@@ -97,11 +97,17 @@ def download_youtube_audio(video_id: str, output_path: str, sponsorblock_categor
             'categories': SponsorBlockCategories.bitfield_to_list(sponsorblock_categories)
         })
 
+    def duration_filter(info, *, incomplete):
+        duration = info.get('duration')
+        if duration and duration < 60:
+            return 'The video is too short'
+
+
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': post_processors,
         'outtmpl': base_path,
-        'match_filters': [f'duration>={min_duration_seconds}']
+        'match_filters': [ duration_filter ]
     }
     with YoutubeDL(ydl_opts) as ydl:
         ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
