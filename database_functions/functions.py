@@ -329,6 +329,7 @@ def add_podcast(cnx, database_type, podcast_values, user_id, feed_cutoff, min_du
                 explicit,
                 user_id,
                 feed_cutoff,
+                min_duration_seconds,
                 username,
                 password,
                 podcast_index_id
