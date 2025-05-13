@@ -7726,6 +7726,46 @@ def check_youtube_channel(cnx, database_type, user_id, channel_name, channel_url
         if cursor:
             cursor.close()
 
+def check_youtube_channel_id(cnx, database_type, podcast_id):
+    cursor = None
+    try:
+        cursor = cnx.cursor()
+        if database_type == "postgresql":
+            query = '''
+                SELECT IsYouTubeChannel
+                FROM "Podcasts"
+                WHERE PodcastID = %s
+                AND IsYouTubeChannel = TRUE
+            '''
+        else:  # MySQL or MariaDB
+            query = '''
+                SELECT IsYouTubeChannel
+                FROM Podcasts
+                WHERE PodcastID = %s
+                AND IsYouTubeChannel = TRUE
+            '''
+        cursor.execute(query, (podcast_id,))
+        result = cursor.fetchone()
+
+        # Handle different return types from different database adapters
+        if result is not None:
+            # If result is a dict (psycopg2 with dict cursor)
+            if isinstance(result, dict):
+                return True
+            # If result is a tuple/list (standard cursor)
+            elif isinstance(result, (tuple, list)):
+                return True
+            # Any other non-None result means we found a match
+            else:
+                return True
+        return False
+    except Exception as e:
+        print(f"Error checking if YouTube channel: {e}")
+        return False
+    finally:
+        if cursor:
+            cursor.close()
+
 def reset_password_create_code(cnx, database_type, user_email):
     reset_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     cursor = cnx.cursor()
@@ -11397,8 +11437,8 @@ def remove_podcast_from_opodsync(cnx, database_type, user_id, gpodder_url, gpodd
                     # PostgreSQL: Quoted table names, unquoted lowercase column names
                     podcast_query = 'SELECT podcastid FROM "Podcasts" WHERE feedurl = %s AND userid = %s'
                 else:  # MySQL or MariaDB
-                    # MySQL/MariaDB: Quoted table and column names with proper case
-                    podcast_query = 'SELECT "PodcastID" FROM "Podcasts" WHERE "FeedURL" = %s AND "UserID" = %s'
+                    # MySQL/MariaDB: Unquoted table and column names with proper case
+                    podcast_query = 'SELECT PodcastID FROM Podcasts WHERE FeedURL = %s AND UserID = %s'
 
                 cursor.execute(podcast_query, (podcast_url, user_id))
                 result = cursor.fetchone()
@@ -11426,15 +11466,15 @@ def remove_podcast_from_opodsync(cnx, database_type, user_id, gpodder_url, gpodd
                         delete_podcast = 'DELETE FROM "Podcasts" WHERE podcastid = %s'
                         update_user_stats = 'UPDATE "UserStats" SET podcastsadded = podcastsadded - 1 WHERE userid = %s'
                     else:  # MySQL or MariaDB
-                        # MySQL/MariaDB: Quoted table and column names with proper case
-                        delete_playlist_contents = 'DELETE FROM "PlaylistContents" WHERE "EpisodeID" IN (SELECT "EpisodeID" FROM "Episodes" WHERE "PodcastID" = %s)'
-                        delete_history = 'DELETE FROM "UserEpisodeHistory" WHERE "EpisodeID" IN (SELECT "EpisodeID" FROM "Episodes" WHERE "PodcastID" = %s)'
-                        delete_downloaded = 'DELETE FROM "DownloadedEpisodes" WHERE "EpisodeID" IN (SELECT "EpisodeID" FROM "Episodes" WHERE "PodcastID" = %s)'
-                        delete_saved = 'DELETE FROM "SavedEpisodes" WHERE "EpisodeID" IN (SELECT "EpisodeID" FROM "Episodes" WHERE "PodcastID" = %s)'
-                        delete_queue = 'DELETE FROM "EpisodeQueue" WHERE "EpisodeID" IN (SELECT "EpisodeID" FROM "Episodes" WHERE "PodcastID" = %s)'
-                        delete_episodes = 'DELETE FROM "Episodes" WHERE "PodcastID" = %s'
-                        delete_podcast = 'DELETE FROM "Podcasts" WHERE "PodcastID" = %s'
-                        update_user_stats = 'UPDATE "UserStats" SET "PodcastsAdded" = "PodcastsAdded" - 1 WHERE "UserID" = %s'
+                        # MySQL/MariaDB: Unquoted table and column names with proper case
+                        delete_playlist_contents = 'DELETE FROM PlaylistContents WHERE EpisodeID IN (SELECT EpisodeID FROM Episodes WHERE PodcastID = %s)'
+                        delete_history = 'DELETE FROM UserEpisodeHistory WHERE EpisodeID IN (SELECT EpisodeID FROM Episodes WHERE PodcastID = %s)'
+                        delete_downloaded = 'DELETE FROM DownloadedEpisodes WHERE EpisodeID IN (SELECT EpisodeID FROM Episodes WHERE PodcastID = %s)'
+                        delete_saved = 'DELETE FROM SavedEpisodes WHERE EpisodeID IN (SELECT EpisodeID FROM Episodes WHERE PodcastID = %s)'
+                        delete_queue = 'DELETE FROM EpisodeQueue WHERE EpisodeID IN (SELECT EpisodeID FROM Episodes WHERE PodcastID = %s)'
+                        delete_episodes = 'DELETE FROM Episodes WHERE PodcastID = %s'
+                        delete_podcast = 'DELETE FROM Podcasts WHERE PodcastID = %s'
+                        update_user_stats = 'UPDATE UserStats SET PodcastsAdded = PodcastsAdded - 1 WHERE UserID = %s'
 
                     # Execute the deletion statements in order
                     try:
