@@ -1508,6 +1508,8 @@ class PodcastValuesModel(BaseModel):
     pod_website: str
     pod_explicit: bool
     user_id: int
+    min_duration_seconds: int = Field(default=0)
+    feed_cutoff: int = Field(default=0)
 
 class AddPodcastRequest(BaseModel):
     podcast_values: PodcastValuesModel
@@ -1546,7 +1548,8 @@ async def api_add_podcast(
             database_type,
             request.podcast_values.dict(),
             request.podcast_values.user_id,
-            30,
+            request.podcast_values.feed_cutoff,
+            request.podcast_values.min_duration_seconds,
             podcast_index_id=request.podcast_index_id
         )
 
