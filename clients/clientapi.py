@@ -5200,6 +5200,8 @@ def check_valid_feed(feed_url: str, username: Optional[str] = None, password: Op
 class CustomPodcast(BaseModel):
     feed_url: str
     user_id: int
+    feed_cutoff: int = 0
+    min_duration_seconds: int = 0
     username: Optional[str] = None
     password: Optional[str] = None
 
@@ -5226,7 +5228,7 @@ async def add_custom_pod(data: CustomPodcast, cnx=Depends(get_database_connectio
 
         # Assuming the rest of the code processes the podcast correctly
         try:
-            podcast_id = database_functions.functions.add_custom_podcast(database_type, cnx, data.feed_url, data.user_id, data.username, data.password)
+            podcast_id = database_functions.functions.add_custom_podcast(database_type, cnx, data.feed_url, data.feed_cutoff, data.min_duration_seconds, data.user_id, data.username, data.password)
             print('custom done')
             podcast_details = database_functions.functions.get_podcast_details(database_type, cnx, data.user_id, podcast_id)
             return {"data": podcast_details}

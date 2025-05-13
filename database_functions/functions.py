@@ -121,12 +121,11 @@ def get_web_key(cnx, database_type):
             return result[0]
     return None
 
-def add_custom_podcast(database_type, cnx, feed_url, user_id, username=None, password=None):
+def add_custom_podcast(database_type, cnx, feed_url, feed_cutoff, min_duration_seconds, user_id, username=None, password=None):
     # Proceed to extract and use podcast details if the feed is valid
     podcast_values = get_podcast_values(feed_url, user_id, username, password)
     try:
-        feed_cutoff = 30
-        result = add_podcast(cnx, database_type, podcast_values, user_id, feed_cutoff, username, password)
+        result = add_podcast(cnx, database_type, podcast_values, user_id, feed_cutoff, min_duration_seconds, username, password)
         if not result:
             raise Exception("Failed to add the podcast.")
 
